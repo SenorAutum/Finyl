@@ -1,12 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { GraduationCap, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+
+// Import our new Firebase auth tools
+import { auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -14,24 +18,23 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const router = useRouter(); // Added router for redirection
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    
     try {
-      const res = await signIn('credentials', {
-        email,
-        password,
-        redirect: true,
-        callbackUrl: '/dashboard',
-      });
-      if (res?.error) {
-        setError('Invalid email or password');
-        setLoading(false);
-      }
+      // Log the user in via Firebase
+      await signInWithEmailAndPassword(auth, email, password);
+      
+      // If successful, redirect to the dashboard
+      router.push('/dashboard');
     } catch (err: any) {
-      setError('Something went wrong');
+      // Firebase throws specific errors, we catch them and display a friendly message
+      setError('Invalid email or password. Please try again.');
+    } finally {
       setLoading(false);
     }
   };

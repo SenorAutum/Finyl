@@ -1,6 +1,5 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -12,7 +11,6 @@ import {
   BarChart3, 
   Award, 
   CheckCircle, 
-  ChevronRight, 
   Sparkles, 
   Trophy, 
   AlertTriangle, 
@@ -23,6 +21,10 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import Navbar from '@/components/navbar';
 import Footer from '@/components/footer';
+
+// Import our new Firebase auth tools
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const iconMap: Record<string, any> = { Wallet, TrendingUp, Globe, BarChart3, BookOpen };
 
@@ -56,30 +58,37 @@ const dashboardCurriculumHighlight = {
 };
 
 export default function DashboardClient() {
-  const { data: session, status } = useSession() || {};
   const router = useRouter();
+  const [user, setUser] = useState<any>(null);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.replace('/login');
-    }
-  }, [status, router]);
+    // Listen for Firebase login status
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (!currentUser) {
+        router.replace('/login');
+      } else {
+        setUser(currentUser);
+        
+        // Provide a safe empty state so the UI renders beautifully 
+        // while we prep the Firestore database connection in the next phase!
+        setData({
+          trackProgress: [],
+          recentActivity: [],
+          overallPercentage: 0,
+          totalCompleted: 0,
+          totalLessons: 0
+        });
+        
+        setLoading(false);
+      }
+    });
 
-  useEffect(() => {
-    if (status === 'authenticated') {
-      fetch('/api/user/progress')
-        .then((r) => r.json())
-        .then((d) => { 
-          setData(d); 
-          setLoading(false); 
-        })
-        .catch(() => setLoading(false));
-    }
-  }, [status]);
+    return () => unsubscribe();
+  }, [router]);
 
-  if (status === 'loading' || loading) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f8fafc]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
@@ -87,7 +96,8 @@ export default function DashboardClient() {
     );
   }
 
-  const userName = session?.user?.name ?? 'Learner';
+  // Extract the user's name or email prefix to greet them
+  const userName = user?.displayName || user?.email?.split('@')[0] || 'Learner';
   const trackProgress: TrackProgress[] = data?.trackProgress ?? [];
   const recentActivity: Activity[] = data?.recentActivity ?? [];
   const overallPct = data?.overallPercentage ?? 0;
@@ -103,7 +113,7 @@ export default function DashboardClient() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Welcome back, <span className="text-teal-600">{userName.split(' ')[0]}</span> 👋
+              Welcome back, <span className="text-teal-600">{userName}</span> 👋
             </h1>
             <p className="mt-1 text-sm text-slate-500">Track your progress and read your micro-learning milestones.</p>
           </div>
@@ -187,6 +197,11 @@ export default function DashboardClient() {
           <div className="lg:col-span-2 space-y-4">
             <h2 className="text-xl font-bold text-slate-800">Your Learning Tracks</h2>
             <div className="grid gap-4 sm:grid-cols-2">
+              {trackProgress.length === 0 && (
+                <div className="col-span-2 p-6 text-center rounded-2xl bg-white border border-slate-100">
+                  <p className="text-sm text-slate-500">Your custom learning tracks are being prepared.</p>
+                </div>
+              )}
               {trackProgress.map((track, i) => {
                 const Icon = iconMap[track?.icon] ?? BookOpen;
                 return (

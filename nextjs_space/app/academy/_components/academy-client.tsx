@@ -1,6 +1,5 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -11,28 +10,57 @@ import { Button } from '@/components/ui/button';
 import Navbar from '@/components/navbar';
 import Footer from '@/components/footer';
 
+// Import Firebase auth tools
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+
 const iconMap: Record<string, any> = { Wallet: BookOpen, TrendingUp, Globe, BarChart3, BookOpen };
 
 export default function AcademyClient() {
-  const { data: session, status } = useSession() || {};
   const router = useRouter();
   const [tracks, setTracks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authChecking, setAuthChecking] = useState(true);
 
   useEffect(() => {
-    if (status === 'unauthenticated') router.replace('/login');
-  }, [status, router]);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        router.replace('/login');
+      } else {
+        setAuthChecking(false);
+        
+        // Provide safe placeholder tracks since the old Prisma API is gone
+        setTracks([
+          {
+            id: 'personal-finance',
+            title: 'Personal Finance',
+            description: 'Master budgeting, savings, and credit management basics.',
+            icon: 'Wallet',
+            color: '#10B981',
+            modules: [
+              { id: 'm1', title: 'Smart Budgeting', isFree: true, _count: { lessons: 4 } },
+              { id: 'm2', title: 'Credit Repair', isFree: false, _count: { lessons: 5 } }
+            ]
+          },
+          {
+            id: 'investing',
+            title: 'Investing Fundamentals',
+            description: 'Learn about stocks, ETFs, diversification, and risk.',
+            icon: 'TrendingUp',
+            color: '#3B82F6',
+            modules: [
+              { id: 'm3', title: 'Stock Market 101', isFree: true, _count: { lessons: 6 } }
+            ]
+          }
+        ]);
+        setLoading(false);
+      }
+    });
 
-  useEffect(() => {
-    if (status === 'authenticated') {
-      fetch('/api/tracks')
-        .then((r) => r.json())
-        .then((d) => { setTracks(d ?? []); setLoading(false); })
-        .catch(() => setLoading(false));
-    }
-  }, [status]);
+    return () => unsubscribe();
+  }, [router]);
 
-  if (status === 'loading' || status === 'unauthenticated') {
+  if (authChecking) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -67,14 +95,17 @@ export default function AcademyClient() {
                 >
                   <Link href={`/academy/${track?.id ?? ''}`}>
                     <div className="group grid gap-6 rounded-xl bg-card p-6 transition-all hover:scale-[1.01] md:grid-cols-3 cursor-pointer" style={{ boxShadow: 'var(--shadow-md)' }}>
-                      <div className="relative aspect-video overflow-hidden rounded-lg bg-muted md:aspect-[4/3]">
-                        {track?.imageUrl && (
+                      <div className="relative aspect-video overflow-hidden rounded-lg bg-muted md:aspect-[4/3] flex items-center justify-center">
+                        {/* Placeholder visual if no image URL is provided */}
+                        {track?.imageUrl ? (
                           <Image
                             src={track.imageUrl}
                             alt={track?.title ?? 'Track'}
                             fill
                             className="object-cover transition-transform group-hover:scale-105"
                           />
+                        ) : (
+                          <Icon className="h-16 w-16 opacity-20" style={{ color: track?.color ?? '#10B981' }} />
                         )}
                       </div>
                       <div className="md:col-span-2 flex flex-col justify-center">

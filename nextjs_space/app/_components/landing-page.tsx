@@ -1,8 +1,7 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -10,6 +9,10 @@ import { GraduationCap, BookOpen, TrendingUp, Globe, BarChart3, ChevronRight, Za
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/navbar';
 import Footer from '@/components/footer';
+
+// Import Firebase auth tools
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const tracks = [
   { icon: BookOpen, title: 'Personal Finance', description: 'Budgeting, savings, and credit management', color: '#10B981' },
@@ -25,16 +28,24 @@ const features = [
 ];
 
 export default function LandingPage() {
-  const { data: session, status } = useSession() || {};
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    if (status === 'authenticated') {
-      router.replace('/dashboard');
-    }
-  }, [status, router]);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+      
+      if (currentUser) {
+        router.replace('/dashboard');
+      }
+    });
 
-  if (status === 'loading' || status === 'authenticated') {
+    return () => unsubscribe();
+  }, [router]);
+
+  if (loading || user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />

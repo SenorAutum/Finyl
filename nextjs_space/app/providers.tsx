@@ -1,8 +1,9 @@
 'use client';
 
-import { SessionProvider } from 'next-auth/react';
 import React from 'react';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  return <SessionProvider>{children}</SessionProvider>;
+  // NextAuth SessionProvider has been removed.
+  // Firebase auth state is now handled directly inside our client components!
+  return <>{children}</>;
 }

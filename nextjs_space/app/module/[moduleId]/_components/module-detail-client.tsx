@@ -1,6 +1,5 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -10,40 +9,69 @@ import { Button } from '@/components/ui/button';
 import Navbar from '@/components/navbar';
 import Footer from '@/components/footer';
 
+// Import Firebase auth tools
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+
 export default function ModuleDetailClient() {
-  const { data: session, status } = useSession() || {};
   const router = useRouter();
   const params = useParams();
   const moduleId = params?.moduleId as string;
+  
+  const [user, setUser] = useState<any>(null);
   const [mod, setMod] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [authChecking, setAuthChecking] = useState(true);
   const [error, setError] = useState('');
 
-  // 1. Authentication Check
+  // 1. Authentication Check & Data Load
   useEffect(() => {
-    if (status === 'unauthenticated') router.replace('/login');
-  }, [status, router]);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (!currentUser) {
+        router.replace('/login');
+      } else {
+        setUser(currentUser);
+        setAuthChecking(false);
+        loadMockModuleData();
+      }
+    });
 
-  // 2. Fetch Module Data from Database
-  useEffect(() => {
-    if (status === 'authenticated' && moduleId) {
-      fetch(`/api/modules/${moduleId}`)
-        .then(async (r) => {
-          const data = await r.json();
-          if (!r.ok) {
-            if (data?.locked) setError('locked');
-            else setError(data?.error ?? 'Failed');
-          } else {
-            setMod(data);
-          }
-          setLoading(false);
-        })
-        .catch(() => { setError('Failed to load'); setLoading(false); });
-    }
-  }, [status, moduleId]);
+    return () => unsubscribe();
+  }, [router, moduleId]);
+
+  // 2. Safe Fallback Data
+  const loadMockModuleData = () => {
+    setLoading(true);
+    
+    // Simulating a fast network request
+    setTimeout(() => {
+      if (moduleId === 'locked-demo') {
+        setError('locked');
+        setLoading(false);
+        return;
+      }
+      
+      setMod({
+        id: moduleId,
+        title: 'Module 1: The Basics',
+        description: 'Learn the fundamental rules of budgeting, saving, and taking control of your financial future.',
+        track: { 
+          id: 'personal-finance', 
+          title: 'Personal Finance' 
+        },
+        lessons: [
+          { id: 'les-1', title: 'What is a Budget?', completed: true, quizScore: 2, quizTotal: 2 },
+          { id: 'les-2', title: 'The 50/30/20 Rule', completed: false },
+          { id: 'les-3', title: 'Building an Emergency Fund', completed: false }
+        ]
+      });
+      
+      setLoading(false);
+    }, 400);
+  };
 
   // 3. Loading State
-  if (status === 'loading' || status === 'unauthenticated' || loading) {
+  if (authChecking || loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f8fafc]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />

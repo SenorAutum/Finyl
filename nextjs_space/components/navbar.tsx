@@ -1,20 +1,46 @@
 'use client';
 
-import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { GraduationCap, LayoutDashboard, BookOpen, Shield, LogOut, Menu, X, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+// Import Firebase auth tools
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
+
 export default function Navbar() {
-  const { data: session, status } = useSession() || {};
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const isAdmin = (session?.user as any)?.role === 'ADMIN';
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Replace this with your actual admin email
+  const isAdmin = user?.email === 'brandonmwanzia@gmail.com';
+
+  const handleSignOut = async () => {
+    try {
+      await firebaseSignOut(auth);
+      setMobileOpen(false);
+      router.push('/');
+    } catch (error) {
+      console.error('Error signing out', error);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-lg">
       <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4">
-        <Link href={session ? '/dashboard' : '/'} className="flex items-center gap-2">
+        <Link href={user ? '/dashboard' : '/'} className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <GraduationCap className="h-5 w-5 text-primary-foreground" />
           </div>
@@ -23,43 +49,45 @@ export default function Navbar() {
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex">
-          {session ? (
-            <>
-              <Link href="/dashboard">
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <LayoutDashboard className="h-4 w-4" /> Dashboard
-                </Button>
-              </Link>
-              <Link href="/academy">
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <BookOpen className="h-4 w-4" /> Academy
-                </Button>
-              </Link>
-              {isAdmin && (
-                <Link href="/admin">
+          {!loading && (
+            user ? (
+              <>
+                <Link href="/dashboard">
                   <Button variant="ghost" size="sm" className="gap-2">
-                    <Shield className="h-4 w-4" /> Admin
+                    <LayoutDashboard className="h-4 w-4" /> Dashboard
                   </Button>
                 </Link>
-              )}
-              <Link href="/profile">
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <User className="h-4 w-4" /> Profile
+                <Link href="/academy">
+                  <Button variant="ghost" size="sm" className="gap-2">
+                    <BookOpen className="h-4 w-4" /> Academy
+                  </Button>
+                </Link>
+                {isAdmin && (
+                  <Link href="/admin">
+                    <Button variant="ghost" size="sm" className="gap-2">
+                      <Shield className="h-4 w-4" /> Admin
+                    </Button>
+                  </Link>
+                )}
+                <Link href="/profile">
+                  <Button variant="ghost" size="sm" className="gap-2">
+                    <User className="h-4 w-4" /> Profile
+                  </Button>
+                </Link>
+                <Button variant="outline" size="sm" className="gap-2 ml-2" onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4" /> Sign Out
                 </Button>
-              </Link>
-              <Button variant="outline" size="sm" className="gap-2 ml-2" onClick={() => signOut({ callbackUrl: '/' })}>
-                <LogOut className="h-4 w-4" /> Sign Out
-              </Button>
-            </>
-          ) : (
-            <>
-              <Link href="/login">
-                <Button variant="ghost" size="sm">Sign In</Button>
-              </Link>
-              <Link href="/signup">
-                <Button size="sm" className="gap-2">Get Started</Button>
-              </Link>
-            </>
+              </>
+            ) : (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost" size="sm">Sign In</Button>
+                </Link>
+                <Link href="/signup">
+                  <Button size="sm" className="gap-2">Get Started</Button>
+                </Link>
+              </>
+            )
           )}
         </nav>
 
@@ -70,10 +98,10 @@ export default function Navbar() {
       </div>
 
       {/* Mobile menu */}
-      {mobileOpen && (
+      {mobileOpen && !loading && (
         <div className="border-t border-border bg-background px-4 pb-4 md:hidden">
           <nav className="flex flex-col gap-2 pt-2">
-            {session ? (
+            {user ? (
               <>
                 <Link href="/dashboard" onClick={() => setMobileOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start gap-2">
@@ -97,7 +125,7 @@ export default function Navbar() {
                     <User className="h-4 w-4" /> Profile
                   </Button>
                 </Link>
-                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => signOut({ callbackUrl: '/' })}>
+                <Button variant="outline" className="w-full justify-start gap-2" onClick={handleSignOut}>
                   <LogOut className="h-4 w-4" /> Sign Out
                 </Button>
               </>

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { doc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
 
 export async function POST(req: Request) {
   try {
@@ -11,10 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid payload received' }, { status: 400 });
     }
 
-    const resultCode = stkCallback.ResultCode;
-
-    if (resultCode === 0) {
-      // 1. Extract Safaricom Data
+    if (stkCallback.ResultCode === 0) {
       const callbackMetadata = stkCallback.CallbackMetadata.Item;
       const amount = callbackMetadata.find((item: any) => item.Name === 'Amount')?.Value;
       const receipt = callbackMetadata.find((item: any) => item.Name === 'MpesaReceiptNumber')?.Value;
@@ -22,13 +18,9 @@ export async function POST(req: Request) {
 
       console.log(`✅ Success! Received Ksh ${amount} from ${phone}. Receipt: ${receipt}`);
 
-      // 2. Identify the User and Module 
-      // Safaricom doesn't know our User ID, but we can look up the user by their phone number!
-      // *Note: For production, you will pass the User ID in the AccountReference during STK push*
-      
-      // For this implementation, we will log the transaction in a dedicated "transactions" collection
-      const transactionRef = doc(db, 'transactions', receipt);
-      await setDoc(transactionRef, {
+      // UPGRADE: Using Admin SDK to force an instant, synchronous write to the cloud!
+      const transactionRef = adminDb.collection('transactions').doc(receipt);
+      await transactionRef.set({
         amount,
         phone,
         receipt,
@@ -36,15 +28,6 @@ export async function POST(req: Request) {
         timestamp: new Date().toISOString(),
         rawPayload: stkCallback
       });
-
-      // TODO: In a full production app, you would query the 'users' collection to find the user 
-      // with this phone number, and then run this update command:
-      /*
-      const userRef = doc(db, 'users', FOUND_USER_ID);
-      await updateDoc(userRef, {
-        unlockedModules: arrayUnion(TARGET_MODULE_ID)
-      });
-      */
 
     } else {
       console.log(`❌ Payment Failed or Cancelled: ${stkCallback.ResultDesc}`);

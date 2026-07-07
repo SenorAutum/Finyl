@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/firebase';
+import { doc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    
-    // Safaricom nests everything inside Body.stkCallback
     const stkCallback = data?.Body?.stkCallback;
 
     if (!stkCallback) {
@@ -14,28 +14,42 @@ export async function POST(req: Request) {
     const resultCode = stkCallback.ResultCode;
 
     if (resultCode === 0) {
-      // ResultCode 0 means the payment was completely successful!
+      // 1. Extract Safaricom Data
       const callbackMetadata = stkCallback.CallbackMetadata.Item;
-      
-      // Extract exactly what we need using Safaricom's specific key names
-      const amountItem = callbackMetadata.find((item: any) => item.Name === 'Amount');
-      const receiptItem = callbackMetadata.find((item: any) => item.Name === 'MpesaReceiptNumber');
-      const phoneItem = callbackMetadata.find((item: any) => item.Name === 'PhoneNumber');
-
-      const amount = amountItem?.Value;
-      const receipt = receiptItem?.Value;
-      const phone = phoneItem?.Value;
+      const amount = callbackMetadata.find((item: any) => item.Name === 'Amount')?.Value;
+      const receipt = callbackMetadata.find((item: any) => item.Name === 'MpesaReceiptNumber')?.Value;
+      const phone = callbackMetadata.find((item: any) => item.Name === 'PhoneNumber')?.Value;
 
       console.log(`✅ Success! Received Ksh ${amount} from ${phone}. Receipt: ${receipt}`);
+
+      // 2. Identify the User and Module 
+      // Safaricom doesn't know our User ID, but we can look up the user by their phone number!
+      // *Note: For production, you will pass the User ID in the AccountReference during STK push*
       
-      // TODO: Save this receipt to Firestore and unlock the module for the user!
+      // For this implementation, we will log the transaction in a dedicated "transactions" collection
+      const transactionRef = doc(db, 'transactions', receipt);
+      await setDoc(transactionRef, {
+        amount,
+        phone,
+        receipt,
+        status: 'COMPLETED',
+        timestamp: new Date().toISOString(),
+        rawPayload: stkCallback
+      });
+
+      // TODO: In a full production app, you would query the 'users' collection to find the user 
+      // with this phone number, and then run this update command:
+      /*
+      const userRef = doc(db, 'users', FOUND_USER_ID);
+      await updateDoc(userRef, {
+        unlockedModules: arrayUnion(TARGET_MODULE_ID)
+      });
+      */
 
     } else {
-      // Payment failed, timed out, or was cancelled by the user
       console.log(`❌ Payment Failed or Cancelled: ${stkCallback.ResultDesc}`);
     }
 
-    // Safaricom ALWAYS requires a 200 OK response so they stop pinging your server
     return NextResponse.json({ success: true });
 
   } catch (error) {

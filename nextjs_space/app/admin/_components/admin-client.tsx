@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users, BookOpen, CheckCircle, Unlock, Shield, Clock,
-  Edit, Trash2, Plus, X, Save, ChevronDown, ChevronUp
+  Edit, Trash2, Plus, X, Save, ChevronDown, ChevronUp, Terminal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,12 +13,13 @@ import { Label } from '@/components/ui/label';
 import Navbar from '@/components/navbar';
 import Footer from '@/components/footer';
 import { toast } from 'sonner';
+import AuditLogs from './audit-logs'; // <-- Added our new component!
 
 // Import Firebase auth tools
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
-type Tab = 'overview' | 'users' | 'lessons';
+type Tab = 'overview' | 'users' | 'lessons' | 'logs'; // <-- Added 'logs' to the tabs
 
 // Replace this with your actual admin email
 const ADMIN_EMAIL = 'brandonmwanzia@gmail.com';
@@ -122,7 +123,7 @@ export default function AdminClient() {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b border-border pb-2">
-          {(['overview', 'users', 'lessons'] as Tab[]).map((t) => (
+          {(['overview', 'users', 'lessons', 'logs'] as Tab[]).map((t) => (
             <Button
               key={t}
               variant={tab === t ? 'default' : 'ghost'}
@@ -362,6 +363,14 @@ export default function AdminClient() {
             </div>
           </div>
         )}
+
+        {/* API Audit Logs */}
+        {tab === 'logs' && (
+          <div className="space-y-4">
+            <AuditLogs />
+          </div>
+        )}
+
       </main>
       <Footer />
     </div>

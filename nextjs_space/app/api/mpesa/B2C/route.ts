@@ -4,14 +4,30 @@ import { logDarajaApi } from '@/lib/daraja-logger';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { phoneNumber, amount } = body; // e.g., 254700000000
+    const { phoneNumber, amount } = body; 
 
-    // Note: You must generate a new Access Token here just like you do for C2B
-    const accessToken = 'YOUR_GENERATED_TOKEN'; 
+    const consumerKey = process.env.MPESA_CONSUMER_KEY;
+    const consumerSecret = process.env.MPESA_CONSUMER_SECRET;
+    
+    if (!consumerKey || !consumerSecret) {
+      return NextResponse.json({ error: 'M-Pesa credentials missing' }, { status: 500 });
+    }
 
+    // 1. Generate Access Token
+    const authString = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
+    const tokenResponse = await fetch('https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials', {
+      headers: { Authorization: `Basic ${authString}` },
+    });
+    
+    const tokenData = await tokenResponse.json();
+    if (!tokenData.access_token) {
+      throw new Error('Failed to generate M-Pesa access token');
+    }
+
+    // 2. Prepare B2C Payload
     const payload = {
-      InitiatorName: process.env.B2C_INITIATOR_NAME, // From Daraja Portal
-      SecurityCredential: process.env.B2C_SECURITY_CREDENTIAL, // From Daraja Portal
+      InitiatorName: process.env.B2C_INITIATOR_NAME, 
+      SecurityCredential: process.env.B2C_SECURITY_CREDENTIAL, 
       CommandID: "BusinessPayment",
       Amount: amount,
       PartyA: process.env.MPESA_SHORTCODE,
@@ -22,13 +38,14 @@ export async function POST(req: Request) {
       Occasion: "Payout"
     };
 
-    // 1. LOG THE OUTBOUND REQUEST
+    // 3. LOG THE OUTBOUND REQUEST
     await logDarajaApi('/mpesa/b2c/v3/paymentrequest', 'OUTBOUND', payload, 'PENDING');
 
+    // 4. Send the Request
     const response = await fetch('https://sandbox.safaricom.co.ke/mpesa/b2c/v3/paymentrequest', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${tokenData.access_token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload)
@@ -36,11 +53,12 @@ export async function POST(req: Request) {
 
     const data = await response.json();
     
-    // 2. LOG SAFARICOM'S IMMEDIATE ACKNOWLEDGEMENT
+    // 5. LOG SAFARICOM'S IMMEDIATE ACKNOWLEDGEMENT
     await logDarajaApi('/mpesa/b2c/v3/paymentrequest', 'INBOUND', data, response.status);
 
     return NextResponse.json(data);
   } catch (error) {
+    console.error('B2C Error:', error);
     return NextResponse.json({ error: 'B2C Request Failed' }, { status: 500 });
   }
 }

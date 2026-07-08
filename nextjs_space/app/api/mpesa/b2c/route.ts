@@ -30,7 +30,6 @@ export async function POST(req: Request) {
       SecurityCredential: process.env.B2C_SECURITY_CREDENTIAL, 
       CommandID: "BusinessPayment",
       Amount: amount,
-      // THE FIX: Using the dedicated B2C shortcode instead of the STK Push Paybill
       PartyA: process.env.MPESA_B2C_SHORTCODE, 
       PartyB: phoneNumber,
       Remarks: "Finyl Affiliate Payout",
@@ -38,6 +37,13 @@ export async function POST(req: Request) {
       ResultURL: `https://${req.headers.get('host')}/api/mpesa/b2c/callback`,
       Occasion: "Payout"
     };
+
+    // --- ADDED DEBUG TRAP ---
+    console.log("🚨 B2C DEBUG PAYLOAD:", JSON.stringify({
+      ...payload,
+      SecurityCredential: payload.SecurityCredential ? "EXISTS (Hidden for security)" : "MISSING!"
+    }, null, 2));
+    // ------------------------
 
     // 3. LOG THE OUTBOUND REQUEST
     await logDarajaApi('/mpesa/b2c/v3/paymentrequest', 'OUTBOUND', payload, 'PENDING');

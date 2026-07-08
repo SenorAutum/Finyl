@@ -30,7 +30,8 @@ export async function POST(req: Request) {
       SecurityCredential: process.env.B2C_SECURITY_CREDENTIAL, 
       CommandID: "BusinessPayment",
       Amount: amount,
-      PartyA: process.env.MPESA_SHORTCODE,
+      // THE FIX: Using the dedicated B2C shortcode instead of the STK Push Paybill
+      PartyA: process.env.MPESA_B2C_SHORTCODE, 
       PartyB: phoneNumber,
       Remarks: "Finyl Affiliate Payout",
       QueueTimeOutURL: `https://${req.headers.get('host')}/api/mpesa/b2c/callback`,

@@ -1,9 +1,20 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
+import { logDarajaApi } from '@/lib/daraja-logger';
 
 export async function POST(req: Request) {
   try {
     const data = await req.json();
+    
+    // 1. SECURE THE EVIDENCE: Log the raw inbound callback immediately
+    await logDarajaApi(
+      '/api/mpesa/callback', 
+      'INBOUND', 
+      data, 
+      200, 
+      data?.Body?.stkCallback?.CheckoutRequestID || 'UNKNOWN_REF'
+    );
+
     const stkCallback = data?.Body?.stkCallback;
 
     if (!stkCallback) {
@@ -18,7 +29,7 @@ export async function POST(req: Request) {
 
       console.log(`✅ Success! Received Ksh ${amount} from ${phone}. Receipt: ${receipt}`);
 
-      // UPGRADE: Using Admin SDK to force an instant, synchronous write to the cloud!
+      // 2. UPGRADE: Using Admin SDK to force an instant, synchronous write to the cloud!
       const transactionRef = adminDb.collection('transactions').doc(receipt);
       await transactionRef.set({
         amount,

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { BookOpen, TrendingUp, Globe, BarChart3, Lock, Unlock, CheckCircle, ChevronRight, ArrowLeft, DollarSign } from 'lucide-react';
+import { BookOpen, TrendingUp, Globe, BarChart3, Lock, Unlock, CheckCircle, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import Navbar from '@/components/navbar';
@@ -14,7 +14,10 @@ import { toast } from 'sonner';
 
 // Import Firebase auth tools
 import { auth } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
+
+// 🚨 IMPORT YOUR CHECKOUT BUTTON
+import CheckoutButton from '@/app/_components/CheckoutButton';
 
 const iconMap: Record<string, any> = { Wallet: BookOpen, TrendingUp, Globe, BarChart3, BookOpen };
 
@@ -26,13 +29,16 @@ export default function TrackDetailClient() {
   const [track, setTrack] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [authChecking, setAuthChecking] = useState(true);
-  const [unlocking, setUnlocking] = useState<string | null>(null);
+  
+  // Track the logged in user
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) {
         router.replace('/login');
       } else {
+        setCurrentUser(user);
         setAuthChecking(false);
         loadMockTrackData();
       }
@@ -59,7 +65,7 @@ export default function TrackDetailClient() {
             title: 'Module 1: The Basics',
             description: 'Learn the fundamental rules of budgeting and saving.',
             isFree: true,
-            isUnlocked: true,
+            isUnlocked: true, // Free modules are always unlocked
             totalLessons: 4,
             completedLessons: 1,
             lessons: [{ id: 'les-1', title: 'What is a Budget?' }, { id: 'les-2', title: 'The 50/30/20 Rule' }]
@@ -69,8 +75,8 @@ export default function TrackDetailClient() {
             title: 'Module 2: Advanced Strategies',
             description: 'Take your finances to the next level.',
             isFree: false,
-            isUnlocked: false,
-            price: 4.99,
+            isUnlocked: false, // This is locked and requires payment!
+            price: 100, // Updated to display Ksh 100 instead of $4.99
             totalLessons: 5,
             completedLessons: 0,
             lessons: []
@@ -79,25 +85,6 @@ export default function TrackDetailClient() {
       });
       setLoading(false);
     }, 400);
-  };
-
-  const handleUnlock = async (moduleId: string) => {
-    setUnlocking(moduleId);
-    
-    // Simulate a secure unlock request
-    setTimeout(() => {
-      toast.success('Module unlocked successfully!');
-      
-      // Update the local state to show it as unlocked
-      setTrack((prev: any) => ({
-        ...prev,
-        modules: prev.modules.map((m: any) => 
-          m.id === moduleId ? { ...m, isUnlocked: true, lessons: [{ id: 'les-new', title: 'Welcome to the Module' }] } : m
-        )
-      }));
-      
-      setUnlocking(null);
-    }, 1000);
   };
 
   if (authChecking || loading) {
@@ -168,7 +155,7 @@ export default function TrackDetailClient() {
                 className="rounded-xl bg-card p-6 transition-all"
                 style={{ boxShadow: 'var(--shadow-md)' }}
               >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       {isUnlocked ? (
@@ -182,6 +169,7 @@ export default function TrackDetailClient() {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground mb-3">{mod?.description ?? ''}</p>
+                    
                     {isUnlocked && (
                       <div className="max-w-sm">
                         <div className="flex justify-between text-xs mb-1">
@@ -189,37 +177,33 @@ export default function TrackDetailClient() {
                           <span className="font-medium" style={{ color: track?.color ?? '#10B981' }}>{pct}%</span>
                         </div>
                         <Progress value={pct} className="h-2" />
-                      </div>
-                    )}
-                    {isUnlocked && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {(mod?.lessons ?? []).map((les: any) => (
-                          <Link key={les?.id ?? Math.random()} href={`/lesson/${les?.id ?? ''}`}>
-                            <span className="inline-flex items-center gap-1 rounded-lg bg-muted px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors cursor-pointer">
-                              <BookOpen className="h-3 w-3" /> {les?.title ?? 'Lesson'}
-                            </span>
-                          </Link>
-                        ))}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {(mod?.lessons ?? []).map((les: any) => (
+                            <Link key={les?.id ?? Math.random()} href={`/lesson/${les?.id ?? ''}`}>
+                              <span className="inline-flex items-center gap-1 rounded-lg bg-muted px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors cursor-pointer">
+                                <BookOpen className="h-3 w-3" /> {les?.title ?? 'Lesson'}
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
-                  <div className="flex-shrink-0">
+                  
+                  <div className="flex-shrink-0 mt-4 sm:mt-0">
                     {isUnlocked ? (
                       <Link href={`/module/${mod?.id ?? ''}`}>
-                        <Button className="gap-2">
+                        <Button className="gap-2 w-full sm:w-auto">
                           Continue <ChevronRight className="h-4 w-4" />
                         </Button>
                       </Link>
                     ) : (
-                      <Button
-                        onClick={() => handleUnlock(mod?.id ?? '')}
-                        disabled={unlocking === mod?.id}
-                        className="gap-2"
-                        variant="secondary"
-                      >
-                        <DollarSign className="h-4 w-4" />
-                        {unlocking === mod?.id ? 'Unlocking...' : `Unlock — $${mod?.price?.toFixed?.(2) ?? '0.00'}`}
-                      </Button>
+                      // 🚨 LIVE MPESA CHECKOUT COMPONENT 🚨
+                      // This replaces the old mock "Unlock" button
+                      <CheckoutButton 
+                        moduleId={mod?.id ?? 'unknown-module'} 
+                        userId={currentUser?.uid || 'anonymous'} 
+                      />
                     )}
                   </div>
                 </div>

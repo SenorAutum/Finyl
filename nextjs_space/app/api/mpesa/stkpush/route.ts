@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
-import { logDarajaApi } from '@/lib/daraja-logger'; // Import the logger
+import { logDarajaApi } from '@/lib/daraja-logger';
+import { adminDb } from '@/lib/firebase-admin'; // 🚨 ADDED: Import your Firestore admin db
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { phoneNumber, moduleId } = body;
+    // 🚨 Make sure your frontend is passing the userId along with phoneNumber and moduleId!
+    const { phoneNumber, moduleId, userId } = body; 
 
     // 1. Format the phone number (Safaricom requires 254XXXXXXXXX)
     let formattedPhone = phoneNumber.replace(/\s+/g, '');
@@ -56,7 +58,7 @@ export async function POST(req: Request) {
       TransactionDesc: `Unlock Module ${moduleId}`,
     };
 
-    // --- ADDED: Log the outbound request ---
+    // Log the outbound request
     await logDarajaApi('/mpesa/stkpush/v1/processrequest', 'OUTBOUND', payload, 'PENDING');
 
     // 6. Initiate STK Push
@@ -71,11 +73,29 @@ export async function POST(req: Request) {
 
     const stkData = await stkResponse.json();
 
-    // --- ADDED: Log Safaricom's immediate response ---
+    // Log Safaricom's immediate response
     await logDarajaApi('/mpesa/stkpush/v1/processrequest', 'INBOUND', stkData, stkResponse.status);
 
+    // ==========================================
+    // 🚨 THE QUICK INITIATOR UPDATE IS HERE 🚨
+    // ==========================================
     if (stkData.ResponseCode === '0') {
-      return NextResponse.json({ success: true, message: 'STK Push sent successfully', checkoutRequestID: stkData.CheckoutRequestID });
+      
+      // Before we tell the frontend "Success", we create the PENDING record in Firestore
+      // using Safaricom's CheckoutRequestID as the document ID.
+      await adminDb.collection('transactions').doc(stkData.CheckoutRequestID).set({
+        userId: userId || 'UNKNOWN_USER', 
+        moduleId: moduleId || 'UNKNOWN_MODULE',
+        status: 'PENDING',
+        createdAt: new Date().toISOString()
+      });
+
+      return NextResponse.json({ 
+        success: true, 
+        message: 'STK Push sent successfully', 
+        checkoutRequestID: stkData.CheckoutRequestID 
+      });
+
     } else {
       return NextResponse.json({ error: stkData.errorMessage || 'Failed to initiate STK push' }, { status: 400 });
     }

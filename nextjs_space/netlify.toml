@@ -1,0 +1,13 @@
+[build]
+  # Specifies where Netlify should execute the installation and build
+  base = "nextjs_space"
+  
+  # The exact command to run inside that directory
+  command = "npm run build"
+  
+  # Tells Netlify exactly where Next.js places the compiled production code
+  publish = ".next"
+
+[[plugins]]
+  # Forces Netlify to use the correct Next.js runtime environment
+  package = "@netlify/plugin-nextjs"

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { logDarajaApi } from '@/lib/daraja-logger'; // Import the logger
 
 export async function POST(req: Request) {
   try {
@@ -38,32 +39,40 @@ export async function POST(req: Request) {
     const password = Buffer.from(`${shortcode}${passkey}${timestamp}`).toString('base64');
 
     // 4. Determine your live callback URL
-    // We will build this callback route in the next step!
     const callbackUrl = `https://${req.headers.get('host')}/api/mpesa/callback`;
 
-    // 5. Initiate STK Push
+    // 5. Prepare the STK Push Payload
+    const payload = {
+      BusinessShortCode: shortcode,
+      Password: password,
+      Timestamp: timestamp,
+      TransactionType: 'CustomerPayBillOnline',
+      Amount: 100, // Hardcoded Ksh 100
+      PartyA: formattedPhone,
+      PartyB: shortcode,
+      PhoneNumber: formattedPhone,
+      CallBackURL: callbackUrl,
+      AccountReference: `Module_${moduleId}`,
+      TransactionDesc: `Unlock Module ${moduleId}`,
+    };
+
+    // --- ADDED: Log the outbound request ---
+    await logDarajaApi('/mpesa/stkpush/v1/processrequest', 'OUTBOUND', payload, 'PENDING');
+
+    // 6. Initiate STK Push
     const stkResponse = await fetch('https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${tokenData.access_token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        BusinessShortCode: shortcode,
-        Password: password,
-        Timestamp: timestamp,
-        TransactionType: 'CustomerPayBillOnline',
-        Amount: 100, // Hardcoded Ksh 100 as requested
-        PartyA: formattedPhone,
-        PartyB: shortcode,
-        PhoneNumber: formattedPhone,
-        CallBackURL: callbackUrl,
-        AccountReference: `Module_${moduleId}`,
-        TransactionDesc: `Unlock Module ${moduleId}`,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const stkData = await stkResponse.json();
+
+    // --- ADDED: Log Safaricom's immediate response ---
+    await logDarajaApi('/mpesa/stkpush/v1/processrequest', 'INBOUND', stkData, stkResponse.status);
 
     if (stkData.ResponseCode === '0') {
       return NextResponse.json({ success: true, message: 'STK Push sent successfully', checkoutRequestID: stkData.CheckoutRequestID });

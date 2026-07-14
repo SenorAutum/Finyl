@@ -47,7 +47,7 @@ export default function TrackDetailClient() {
     return () => unsubscribe();
   }, [router, trackId]);
 
-  // Safe fallback data since the old Prisma API was removed
+  // Updated to include the comprehensive Finlit Curriculum
   const loadMockTrackData = () => {
     setLoading(true);
     
@@ -55,31 +55,110 @@ export default function TrackDetailClient() {
     setTimeout(() => {
       setTrack({
         id: trackId,
-        title: trackId === 'investing' ? 'Investing Fundamentals' : 'Personal Finance',
-        description: 'Master the basics of managing your money and building wealth for the future.',
-        color: trackId === 'investing' ? '#3B82F6' : '#10B981',
-        icon: trackId === 'investing' ? 'TrendingUp' : 'Wallet',
+        title: 'Digital Credit & Financial Mastery',
+        description: 'Master smart budgeting, responsible borrowing, and digital security to build your business resilience.',
+        color: '#10B981',
+        icon: 'Wallet',
         modules: [
           {
             id: 'mod-1',
-            title: 'Module 1: The Basics',
-            description: 'Learn the fundamental rules of budgeting and saving.',
+            title: 'Module 1: Smart Budgeting for Digital Borrowers',
+            description: 'Learn the golden rule of cash separation and the mobile-friendly 50/30/20 matrix.',
             isFree: true,
-            isUnlocked: true, // Free modules are always unlocked
-            totalLessons: 4,
-            completedLessons: 1,
-            lessons: [{ id: 'les-1', title: 'What is a Budget?' }, { id: 'les-2', title: 'The 50/30/20 Rule' }]
+            isUnlocked: true,
+            totalLessons: 3,
+            completedLessons: 0,
+            lessons: [
+              { id: 'les-1-1', title: 'The Golden Rule: Separating Personal and Business Cash' },
+              { id: 'les-1-2', title: 'The Mobile-Friendly 50/30/20 Budgeting Matrix' },
+              { id: 'les-1-3', title: 'In-App Tool Suggestion: The Daily Cash Tracker' }
+            ]
           },
           {
             id: 'mod-2',
-            title: 'Module 2: Advanced Strategies',
-            description: 'Take your finances to the next level.',
+            title: 'Module 2: Intentional Saving & Building Your Cushion',
+            description: 'Move away from constant reactive borrowing by automating your savings.',
             isFree: false,
-            isUnlocked: false, // This is locked and requires payment!
-            price: 100, // Updated to display Ksh 100 instead of $4.99
-            totalLessons: 5,
+            isUnlocked: false,
+            price: 100,
+            totalLessons: 2,
             completedLessons: 0,
-            lessons: []
+            lessons: [
+              { id: 'les-2-1', title: 'The "Emergency Fund" Shield' },
+              { id: 'les-2-2', title: 'Automating Your Savings Goals' }
+            ]
+          },
+          {
+            id: 'mod-3',
+            title: 'Module 3: Responsible Borrowing & Your Rights',
+            description: 'Understand the Key Facts Statement (KFS) and your protection boundaries.',
+            isFree: false,
+            isUnlocked: false,
+            price: 100,
+            totalLessons: 3,
+            completedLessons: 0,
+            lessons: [
+              { id: 'les-3-1', title: 'Demystifying the Key Facts Statement (KFS)' },
+              { id: 'les-3-2', title: 'Safe Spaces: Proactive Support for Repayment Distress' },
+              { id: 'les-3-3', title: 'Knowing Your Protection Boundaries Against Harsh Debt Collection' }
+            ]
+          },
+          {
+            id: 'mod-4',
+            title: 'Module 4: Digital Security & Beating the Scammers',
+            description: 'Interactive safety checklists to minimize digital asset loss.',
+            isFree: false,
+            isUnlocked: false,
+            price: 100,
+            totalLessons: 2,
+            completedLessons: 0,
+            lessons: [
+              { id: 'les-4-1', title: 'Securing Your Digital Wallet' },
+              { id: 'les-4-2', title: 'Reversing Mistaken Transactions' }
+            ]
+          },
+          {
+            id: 'mod-5',
+            title: 'Module 5: Strategic Investing for Growth',
+            description: 'Transitioning from basic micro-savings into asset-building tools.',
+            isFree: false,
+            isUnlocked: false,
+            price: 100,
+            totalLessons: 2,
+            completedLessons: 0,
+            lessons: [
+              { id: 'les-5-1', title: 'Understanding Risk vs. Return' },
+              { id: 'les-5-2', title: 'Accessible Digital Investment Vehicles in Kenya' }
+            ]
+          },
+          {
+            id: 'mod-6',
+            title: 'Module 6: Insurance for Business Continuity',
+            description: 'Moving beyond mandatory packages to mitigate real-world entrepreneurial shocks.',
+            isFree: false,
+            isUnlocked: false,
+            price: 100,
+            totalLessons: 3,
+            completedLessons: 0,
+            lessons: [
+              { id: 'les-6-1', title: 'Demystifying Commercial Insurance Tying' },
+              { id: 'les-6-2', title: 'Key Insurance Coverages Every Business Needs' },
+              { id: 'les-6-3', title: 'The Digital Claim-Handling Standard' }
+            ]
+          },
+          {
+            id: 'mod-7',
+            title: 'Module 7: Resolving Disputes & Escalation Pathways',
+            description: 'Closing the training by reinforcing consumer agency and official legal resources.',
+            isFree: false,
+            isUnlocked: false,
+            price: 100,
+            totalLessons: 2,
+            completedLessons: 0,
+            lessons: [
+              { id: 'les-7-1', title: 'Navigating the App Complaints Panel' },
+              { id: 'les-7-2', title: 'Your Legal Right to External Redress' }
+            ]
           }
         ]
       });

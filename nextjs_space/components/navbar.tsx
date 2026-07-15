@@ -6,31 +6,55 @@ import { useState, useEffect } from 'react';
 import { GraduationCap, LayoutDashboard, BookOpen, Shield, LogOut, Menu, X, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-// Import Firebase auth tools
-import { auth } from '@/lib/firebase';
+// Import Firebase tools
+import { auth, db } from '@/lib/firebase'; // 🚨 Make sure db is exported from your firebase config
 import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function Navbar() {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
+  
+  // New state to track actual database role
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      
+      if (currentUser) {
+        // 1. User is logged in, let's fetch their profile from Firestore
+        try {
+          const userDocRef = doc(db, 'users', currentUser.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          
+          // 2. Check if the document exists AND if the role is admin
+          if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
+            setIsAdmin(true);
+          } else {
+            setIsAdmin(false);
+          }
+        } catch (error) {
+          console.error("Error fetching user role:", error);
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+      
       setLoading(false);
     });
+    
     return () => unsubscribe();
   }, []);
-
-  // Temporary admin check based on email. We will upgrade this to Firestore roles next!
-  const isAdmin = user?.email === 'brandonmwanzia@gmail.com';
 
   const handleSignOut = async () => {
     try {
       await firebaseSignOut(auth);
       setMobileOpen(false);
+      setIsAdmin(false);
       router.push('/');
     } catch (error) {
       console.error('Error signing out', error);
@@ -44,7 +68,6 @@ export default function Navbar() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <GraduationCap className="h-5 w-5 text-primary-foreground" />
           </div>
-          {/* Updated the brand name to Finyl */}
           <span className="font-display text-lg font-bold tracking-tight">Finyl</span>
         </Link>
 
@@ -63,13 +86,16 @@ export default function Navbar() {
                     <BookOpen className="h-4 w-4" /> Academy
                   </Button>
                 </Link>
+                
+                {/* 🚨 This now only renders if Firestore says they are an admin! */}
                 {isAdmin && (
                   <Link href="/admin">
-                    <Button variant="ghost" size="sm" className="gap-2">
+                    <Button variant="ghost" size="sm" className="gap-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50">
                       <Shield className="h-4 w-4" /> Admin
                     </Button>
                   </Link>
                 )}
+                
                 <Link href="/profile">
                   <Button variant="ghost" size="sm" className="gap-2">
                     <User className="h-4 w-4" /> Profile
@@ -114,13 +140,16 @@ export default function Navbar() {
                     <BookOpen className="h-4 w-4" /> Academy
                   </Button>
                 </Link>
+                
+                {/* Mobile Admin Link */}
                 {isAdmin && (
                   <Link href="/admin" onClick={() => setMobileOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start gap-2">
+                    <Button variant="ghost" className="w-full justify-start gap-2 text-amber-600">
                       <Shield className="h-4 w-4" /> Admin
                     </Button>
                   </Link>
                 )}
+                
                 <Link href="/profile" onClick={() => setMobileOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start gap-2">
                     <User className="h-4 w-4" /> Profile

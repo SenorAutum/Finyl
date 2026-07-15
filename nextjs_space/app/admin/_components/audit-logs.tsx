@@ -1,8 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Activity, Terminal, AlertCircle } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Activity, Terminal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// 🚨 NEW: Import Firebase tools
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, query, limit } from 'firebase/firestore';
 
 export default function AuditLogs() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -10,13 +14,49 @@ export default function AuditLogs() {
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/admin/logs')
-      .then((res) => res.json())
-      .then((data) => {
-        setLogs(data.logs || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    // 🚨 NEW: Query the Firestore transactions collection (limit to 50)
+    const q = query(collection(db, 'transactions'), limit(50));
+
+    // Listen for real-time updates
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const txs = snapshot.docs.map(doc => {
+        const data = doc.data();
+        
+        // Determine status based on M-Pesa's ResultCode (0 is success)
+        const isSuccess = data.Body?.stkCallback?.ResultCode === 0 || data.ResponseCode === "0";
+        
+        // Try to find the M-Pesa receipt number
+        let receiptRef = 'N/A';
+        if (data.Body?.stkCallback?.CallbackMetadata?.Item) {
+          const receiptItem = data.Body.stkCallback.CallbackMetadata.Item.find((i: any) => i.Name === 'MpesaReceiptNumber');
+          if (receiptItem) receiptRef = receiptItem.Value;
+        } else if (data.CheckoutRequestID) {
+          receiptRef = data.CheckoutRequestID;
+        }
+
+        // Map it to your exact UI structure
+        return {
+          id: doc.id,
+          direction: 'INBOUND',
+          endpoint: '/api/mpesa/callback',
+          statusCode: isSuccess ? 200 : (data.Body?.stkCallback?.ResultCode || 'PENDING'),
+          timestamp: data.createdAt || new Date().toISOString(),
+          transactionRef: receiptRef,
+          payload: JSON.stringify(data, null, 2)
+        };
+      });
+
+      // Sort newest first
+      txs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      setLogs(txs);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching live logs:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   if (loading) {
@@ -43,8 +83,12 @@ export default function AuditLogs() {
           <Terminal className="h-5 w-5 text-slate-500" />
           Daraja API Audit Trail
         </h2>
-        <span className="text-xs font-medium bg-slate-200 text-slate-600 px-2 py-1 rounded-full">
-          Last 50 Events
+        <span className="text-xs font-medium bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          Live Sync Active
         </span>
       </div>
 
@@ -97,7 +141,7 @@ export default function AuditLogs() {
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden bg-slate-900 border-t border-slate-800"
                 >
-                  <div className="p-6 overflow-x-auto">
+                  <div className="p-6 overflow-x-auto max-h-[400px] overflow-y-auto custom-scrollbar">
                     <div className="flex items-center gap-2 mb-3 text-slate-400 text-xs font-bold tracking-wider uppercase">
                       <Terminal className="h-4 w-4" /> Raw JSON Payload
                     </div>

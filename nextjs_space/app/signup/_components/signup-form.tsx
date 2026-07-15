@@ -1,8 +1,11 @@
 "use client";
 
 import React, { useState } from 'react';
-import { auth } from '@/lib/firebase';
+// 🚨 IMPORT db FROM FIREBASE
+import { auth, db } from '@/lib/firebase'; 
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+// 🚨 IMPORT FIRESTORE TOOLS
+import { doc, setDoc } from 'firebase/firestore'; 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -20,9 +23,18 @@ export default function SignupForm() {
     setLoading(true);
 
     try {
-      // Creates the user inside your Firebase dashboard instantly
-      await createUserWithEmailAndPassword(auth, email, password);
-      // Once successful, navigates to the dashboard
+      // 1. Creates the user credentials in Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // 2. 🚨 NEW: Create the user's database record in Firestore automatically!
+      await setDoc(doc(db, 'users', user.uid), {
+        email: user.email,
+        role: 'user', // Everyone defaults to a standard user
+        createdAt: new Date().toISOString()
+      });
+
+      // 3. Once successful, navigate to the dashboard
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to create an account. Please try again.');

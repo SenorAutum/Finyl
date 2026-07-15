@@ -24,7 +24,7 @@ export default function Navbar() {
     return () => unsubscribe();
   }, []);
 
-  // Replace this with your actual admin email
+  // Temporary admin check based on email. We will upgrade this to Firestore roles next!
   const isAdmin = user?.email === 'brandonmwanzia@gmail.com';
 
   const handleSignOut = async () => {
@@ -44,7 +44,8 @@ export default function Navbar() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <GraduationCap className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-display text-lg font-bold tracking-tight">Money Masters</span>
+          {/* Updated the brand name to Finyl */}
+          <span className="font-display text-lg font-bold tracking-tight">Finyl</span>
         </Link>
 
         {/* Desktop nav */}

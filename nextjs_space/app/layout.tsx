@@ -13,14 +13,14 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mon
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
-  title: 'Money Masters Academy | Financial Literacy Platform',
+  title: 'Finylys Academy | Financial Literacy Platform',
   description: 'Master your finances with bite-sized lessons on personal finance, investing, economics, and trading.',
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',
   },
   openGraph: {
-    title: 'Money Masters Academy',
+    title: 'Finylys Academy',
     description: 'Master your finances with bite-sized lessons on personal finance, investing, economics, and trading.',
     images: ['/og-image.png'],
   },

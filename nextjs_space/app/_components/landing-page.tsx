@@ -102,7 +102,7 @@ export default function LandingPage() {
             <div className="relative aspect-[21/9] w-full overflow-hidden rounded-xl" style={{ boxShadow: 'var(--shadow-lg)' }}>
               <Image
                 src="https://cdn.abacus.ai/images/f22baf51-ec18-40cd-a69e-9f6e29bbf661.png"
-                alt="Money Masters Academy - Financial education platform showing diverse learners engaging with financial concepts"
+                alt="Finylys Academy - Financial education platform showing diverse learners engaging with financial concepts"
                 fill
                 className="object-cover"
                 priority
@@ -211,7 +211,7 @@ export default function LandingPage() {
             className="rounded-2xl bg-gradient-to-r from-primary to-secondary p-12 text-white"
           >
             <h2 className="font-display text-3xl font-bold">Ready to Master Your Finances?</h2>
-            <p className="mt-3 text-white/80 max-w-lg mx-auto">Join thousands of learners building their financial future with Money Masters Academy.</p>
+            <p className="mt-3 text-white/80 max-w-lg mx-auto">Join thousands of learners building their financial future with Finylys Academy.</p>
             <Link href="/signup">
               <Button size="lg" variant="secondary" className="mt-6 bg-white text-primary hover:bg-white/90 gap-2">
                 Get Started Free <ChevronRight className="h-4 w-4" />

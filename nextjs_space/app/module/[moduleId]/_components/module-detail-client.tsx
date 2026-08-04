@@ -19,17 +19,26 @@ export default function ModuleDetailClient() {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Navbar />
       
-      <main className="flex-1 max-w-[1200px] w-full mx-auto px-4 py-8 flex flex-col justify-center">
-        {/* Navigation back to the academy */}
-        <button 
-          onClick={() => router.back()} 
-          className="flex items-center gap-2 text-sm text-slate-500 mb-8 hover:text-slate-800 self-start transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to Academy
-        </button>
+      <main className="flex-1 max-w-[1200px] w-full mx-auto px-4 py-12 flex flex-col items-center">
+        
+        {/* LAYOUT FIX: We wrap the entire content in a max-w-2xl container to prevent wide stretching */}
+        <div className="w-full max-w-2xl">
+          
+          {/* Navigation back to the academy */}
+          <button 
+            onClick={() => router.back()} 
+            className="flex items-center gap-2 text-sm text-slate-500 mb-8 hover:text-slate-800 self-start transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to Academy
+          </button>
 
-        {/* Render the dynamic learning cards using the URL parameter */}
-        <MicroLearningCards moduleId={moduleId} />
+          {/* Render the dynamic learning cards inside a clean, centralized wrapper */}
+          <div className="flex justify-center w-full">
+            <MicroLearningCards moduleId={moduleId} />
+          </div>
+
+        </div>
+
       </main>
 
       <Footer />

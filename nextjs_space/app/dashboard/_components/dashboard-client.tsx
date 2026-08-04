@@ -155,9 +155,16 @@ export default function DashboardClient() {
             </span>
           </div>
           
-          <div className="p-8 rounded-2xl bg-white border border-teal-100 shadow-sm">
-             {/* We hardcode 'mod_1' here so the dashboard always shows the intro lesson */}
-             <MicroLearningCards moduleId="mod_1" />
+          {/* 
+            LAYOUT FIX APPLIED HERE:
+            1. 'flex justify-center' aligns the inner container to the center.
+            2. The inner div with 'w-full max-w-2xl' ensures the cards do not stretch too wide.
+          */}
+          <div className="p-8 rounded-2xl bg-white border border-teal-100 shadow-sm flex justify-center">
+            <div className="w-full max-w-2xl">
+               {/* We hardcode 'mod_1' here so the dashboard always shows the intro lesson */}
+               <MicroLearningCards moduleId="mod_1" />
+            </div>
           </div>
         </motion.div>
 

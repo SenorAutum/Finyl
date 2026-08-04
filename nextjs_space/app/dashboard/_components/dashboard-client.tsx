@@ -13,8 +13,6 @@ import {
   CheckCircle, 
   Sparkles, 
   Trophy, 
-  AlertTriangle, 
-  ArrowRight,
   Wallet
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,6 +23,9 @@ import Footer from '@/components/footer';
 // Import our new Firebase auth tools
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+
+// Import the Micro-Learning Cards
+import MicroLearningCards from '@/components/micro-learning-cards';
 
 const iconMap: Record<string, any> = { Wallet, TrendingUp, Globe, BarChart3, BookOpen };
 
@@ -48,15 +49,6 @@ interface Activity {
   quizTotal: number | null;
 }
 
-// Inline curriculum snapshot for the dashboard micro-card highlight
-const dashboardCurriculumHighlight = {
-  moduleId: "mod-1",
-  moduleTitle: "Smart Budgeting for Digital Borrowers",
-  title: "The Golden Rule: Separating Personal and Business Cash",
-  problem: "Mixing household money with business profits leads to unexpected loan defaults.",
-  strategy: "Open a distinct digital wallet or secondary account solely for your business income and expenses. Pay yourself a fixed, consistent 'salary' from your business wallet to cover personal needs.",
-};
-
 export default function DashboardClient() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -72,7 +64,6 @@ export default function DashboardClient() {
         setUser(currentUser);
         
         // Provide a safe empty state so the UI renders beautifully 
-        // while we prep the Firestore database connection in the next phase!
         setData({
           trackProgress: [],
           recentActivity: [],
@@ -118,7 +109,7 @@ export default function DashboardClient() {
             <p className="mt-1 text-sm text-slate-500">Track your progress and read your micro-learning milestones.</p>
           </div>
           <span className="self-start md:self-center bg-teal-50 text-teal-700 text-xs font-bold px-3 py-1.5 rounded-full border border-teal-100">
-            Finyl Hub Profile Active
+            Finyly Hub Profile Active
           </span>
         </motion.div>
 
@@ -148,45 +139,25 @@ export default function DashboardClient() {
           ))}
         </div>
 
-        {/* Highlight Focus Feature: Embedded Curriculum Card */}
+        {/* Highlight Focus Feature: Micro-Learning Cards */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="mb-8 rounded-2xl bg-white border border-teal-100 shadow-sm overflow-hidden grid md:grid-cols-3"
+          className="mb-12"
         >
-          <div className="p-6 md:col-span-2 bg-gradient-to-br from-teal-50/60 to-transparent flex flex-col justify-between space-y-4">
-            <div>
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 bg-teal-100/50 px-2.5 py-1 rounded-md uppercase tracking-wide mb-3">
-                <Sparkles className="w-3 h-3" /> Quick Learning Milestone
-              </span>
-              <h2 className="text-lg font-bold text-slate-800 leading-tight">
-                {dashboardCurriculumHighlight.title}
-              </h2>
-              <p className="text-sm text-slate-600 mt-2 leading-relaxed">
-                {dashboardCurriculumHighlight.strategy}
-              </p>
-            </div>
-            
-            <div className="pt-2">
-              <Link href={`/module/${dashboardCurriculumHighlight.moduleId}`}>
-                <Button className="bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs py-2 px-4 rounded-xl gap-2 shadow-sm transition-all">
-                  Open Learning Modules <ArrowRight className="w-3.5 h-3.5" />
-                </Button>
-              </Link>
-            </div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-xl font-bold tracking-tight text-slate-800">
+              Quick Learning Milestone
+            </h2>
+            <span className="text-xs font-medium bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full shadow-sm">
+              +10 Points Available
+            </span>
           </div>
           
-          <div className="p-6 bg-slate-50 border-t md:border-t-0 md:border-l border-slate-100 flex flex-col justify-center space-y-3">
-            <div className="flex gap-2 items-start text-amber-600">
-              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider block">The Risk Alert</span>
-                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                  {dashboardCurriculumHighlight.problem}
-                </p>
-              </div>
-            </div>
+          <div className="p-8 rounded-2xl bg-white border border-teal-100 shadow-sm">
+             {/* We hardcode 'mod_1' here so the dashboard always shows the intro lesson */}
+             <MicroLearningCards moduleId="mod_1" />
           </div>
         </motion.div>
 

@@ -20,9 +20,13 @@ import { Progress } from '@/components/ui/progress';
 import Navbar from '@/components/navbar';
 import Footer from '@/components/footer';
 
-// Import our new Firebase auth tools
-import { auth } from '@/lib/firebase';
+// Import our new Firebase auth & database tools
+import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
+
+// Import Curriculum to dynamically calculate total lessons
+import { finylCurriculum } from '@/lib/curriculumData';
 
 // Import the Micro-Learning Cards
 import MicroLearningCards from '@/components/micro-learning-cards';
@@ -55,29 +59,65 @@ export default function DashboardClient() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // Dynamically count all lessons in the curriculum
+  const totalLessonsCount = finylCurriculum.reduce((acc, module) => acc + (module.lessons?.length || 0), 0);
+
   useEffect(() => {
+    let unsubscribeData: () => void;
+
     // Listen for Firebase login status
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       if (!currentUser) {
         router.replace('/login');
       } else {
         setUser(currentUser);
         
-        // Provide a safe empty state so the UI renders beautifully 
-        setData({
-          trackProgress: [],
-          recentActivity: [],
-          overallPercentage: 0,
-          totalCompleted: 0,
-          totalLessons: 0
-        });
+        // Connect to this specific user's live database document
+        const userDocRef = doc(db, 'users', currentUser.uid);
         
-        setLoading(false);
+        unsubscribeData = onSnapshot(userDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const userData = docSnap.data();
+            
+            // Extract stats with safe fallbacks to 0
+            const completed = userData.totalCompleted || 0;
+            const points = userData.points || 0;
+            
+            // Calculate actual percentage
+            const progressPct = totalLessonsCount > 0 
+              ? Math.round((completed / totalLessonsCount) * 100) 
+              : 0;
+
+            setData({
+              totalCompleted: completed,
+              points: points,
+              overallPercentage: progressPct,
+              totalLessons: totalLessonsCount,
+              trackProgress: [], 
+              recentActivity: []
+            });
+          } else {
+            // Safe fallback if their database document is empty
+            setData({
+              totalCompleted: 0,
+              points: 0,
+              overallPercentage: 0,
+              totalLessons: totalLessonsCount,
+              trackProgress: [],
+              recentActivity: []
+            });
+          }
+          setLoading(false);
+        });
       }
     });
 
-    return () => unsubscribe();
-  }, [router]);
+    // Cleanup listeners when the component unmounts
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeData) unsubscribeData();
+    };
+  }, [router, totalLessonsCount]);
 
   if (loading) {
     return (
@@ -87,13 +127,15 @@ export default function DashboardClient() {
     );
   }
 
-  // Extract the user's name or email prefix to greet them
   const userName = user?.displayName || user?.email?.split('@')[0] || 'Learner';
   const trackProgress: TrackProgress[] = data?.trackProgress ?? [];
   const recentActivity: Activity[] = data?.recentActivity ?? [];
-  const overallPct = data?.overallPercentage ?? 0;
+  
+  // Extract our new live stats
   const totalCompleted = data?.totalCompleted ?? 0;
+  const overallPct = data?.overallPercentage ?? 0;
   const totalLessons = data?.totalLessons ?? 0;
+  const totalPoints = data?.points ?? 0;
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 font-sans antialiased">
@@ -113,13 +155,13 @@ export default function DashboardClient() {
           </span>
         </motion.div>
 
-        {/* Stats Grid */}
+        {/* Live Stats Grid */}
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { icon: BookOpen, label: 'Lessons Completed', value: totalCompleted, color: '#0d9488' },
+            { icon: Award, label: 'Total Points', value: totalPoints, color: '#f59e0b' },
             { icon: Trophy, label: 'Overall Progress', value: `${overallPct}%`, color: '#0f766e' },
-            { icon: Award, label: 'Total Lessons', value: totalLessons, color: '#14b8a6' },
-            { icon: Sparkles, label: 'Tracks Available', value: trackProgress?.length ?? 0, color: '#f59e0b' },
+            { icon: Sparkles, label: 'Total Lessons', value: totalLessons, color: '#14b8a6' },
           ].map((stat, i) => (
             <motion.div
               key={stat.label}
@@ -155,14 +197,8 @@ export default function DashboardClient() {
             </span>
           </div>
           
-          {/* 
-            LAYOUT FIX APPLIED HERE:
-            1. 'flex justify-center' aligns the inner container to the center.
-            2. The inner div with 'w-full max-w-2xl' ensures the cards do not stretch too wide.
-          */}
           <div className="p-8 rounded-2xl bg-white border border-teal-100 shadow-sm flex justify-center">
             <div className="w-full max-w-2xl">
-               {/* We hardcode 'mod_1' here so the dashboard always shows the intro lesson */}
                <MicroLearningCards moduleId="mod_1" />
             </div>
           </div>
